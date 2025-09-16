@@ -23,6 +23,15 @@ import Layout from '../layouts/Layout.astro';
 <code id="svg-output"></code>
         </pre>
       </div>
+      <div class="flex gap-3 mt-4">
+  <button id="copy-button" class="btn btn-outline btn-secondary">Copier le code</button>
+  <button id="save-button" class="btn btn-success">Enregistrer</button>
+<div class="mt-6">
+  <a href="/library" class="btn btn-outline btn-info">
+    Voir la bibliothèque
+  </a>
+</div>
+</div>
 
     </div>
 
@@ -39,45 +48,88 @@ import Layout from '../layouts/Layout.astro';
 
   </div>
 
-  <script>
-    //@ts-nocheck
-	
-    async function generateSVG(prompt) {
-      console.log('Generating SVG for prompt:', prompt);
-      const res = await fetch('/api/generateSVG', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-      });
-      const data = await res.json();
-      return data.svg;
-    }
+   <script>
+  //@ts-nocheck
 
-    async function handleSubmit() {
-      let prompt = "";
-      let svgCode = "";
-      const promptElement = document.getElementById("user-prompt");
-      prompt = promptElement ? promptElement.value : "";
-      console.log('submitted: ', prompt);
+  async function generateSVG(prompt) {
+    console.log('Generating SVG for prompt:', prompt);
+    const res = await fetch('/api/generateSVG', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    });
+    const data = await res.json();
+    return data.svg;
+  }
 
-      const svgContainer = document.getElementById("svg-container");
-      let svgOutput = document.getElementById("svg-output");
+  async function handleSubmit() {
+    const promptElement = document.getElementById("user-prompt");
+    const svgContainer  = document.getElementById("svg-container");
+    const svgOutput     = document.getElementById("svg-output");
+    const generateButton = document.getElementById("generate-button");
 
-        svgContainer.innerHTML = `<span class="loading loading-ring loading-xl"></span>`;
-  generateButton.disabled = true;
+    const prompt = (promptElement?.value || "").trim();
+    if (!prompt) return;
 
-      svgCode = await generateSVG(prompt);
+    // spinner + désactivation bouton
+    svgContainer.innerHTML = `<span class="loading loading-ring loading-xl"></span>`;
+    generateButton.disabled = true;
+
+    try {
+      const svgCode = await generateSVG(prompt);
       console.log('svgCode: ', svgCode);
 
-      svgOutput.textContent = svgCode;
-      svgContainer.innerHTML = svgCode;
-
+      svgOutput.textContent = svgCode || "// Aucun SVG généré";
+      svgContainer.innerHTML = svgCode || `<span class="text-gray-400">Aucun SVG reçu</span>`;
+    } catch (err) {
+      console.error("Erreur:", err);
+      svgOutput.textContent = "// Erreur lors de la génération";
+      svgContainer.innerHTML = `<span class="text-error">Erreur serveur</span>`;
+    } finally {
       generateButton.disabled = false;
     }
+  }
 
-    const generateButton = document.getElementById("generate-button");
-    if (generateButton) {
-      generateButton.addEventListener("click", handleSubmit);
+  async function handleSave() {
+    const code = document.getElementById("svg-output")?.textContent || "";
+    if (!code) {
+      alert("Aucun code SVG à enregistrer !");
+      return;
     }
-  </script>
+
+    const name = prompt("Nom du SVG ?");
+    if (!name) return;
+
+    try {
+      const res = await fetch("/api/saveSVG", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, code }),
+      });
+
+      if (res.ok) {
+        alert("SVG enregistré avec succès !");
+      } else {
+        alert("Erreur lors de l'enregistrement.");
+      }
+    } catch (err) {
+      console.error("Erreur:", err);
+      alert("❌ Impossible d’enregistrer.");
+    }
+  }
+
+  function handleCopy() {
+    const code = document.getElementById("svg-output")?.textContent || "";
+    if (!code) return;
+    navigator.clipboard.writeText(code).then(() => {
+      alert("📋 Code copié !");
+    });
+  }
+
+  // attacher les events
+  document.getElementById("generate-button")?.addEventListener("click", handleSubmit);
+  document.getElementById("save-button")?.addEventListener("click", handleSave);
+  document.getElementById("copy-button")?.addEventListener("click", handleCopy);
+</script>
+
 </Layout>
