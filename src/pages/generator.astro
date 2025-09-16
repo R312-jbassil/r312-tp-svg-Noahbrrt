@@ -3,36 +3,81 @@ import Layout from '../layouts/Layout.astro';
 ---
 
 <Layout>
-  <div class="flex flex-col items-center w-full p-6 gap-6">
+   <div class="flex flex-col items-center w-full p-6 gap-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-fuchsia-50 min-h-screen">
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-6xl">
       
-      <div class="card bg-white shadow-xl p-6 flex flex-col items-center justify-center">
-        <h2 class="text-xl font-bold mb-4">Aperçu SVG</h2>
-        <div class="border border-dashed border-gray-300 w-full h-64 flex items-center justify-center rounded-lg">
-          <span class="text-gray-400">Votre SVG apparaîtra ici...</span>
+      <div class="card shadow-xl p-6 flex flex-col bg-white/90 backdrop-blur rounded-2xl border border-indigo-200">
+        <h2 class="text-lg font-semibold mb-4 text-indigo-700">Aperçu SVG</h2>
+        <div
+          id="svg-container"
+          class="border border-dashed border-indigo-300/70 w-full h-64 flex items-center justify-center rounded-xl bg-white"
+        >
+          <span class="text-indigo-400">Votre SVG apparaîtra ici...</span>
         </div>
-        <button class="btn btn-accent mt-4">Télécharger SVG</button>
       </div>
 
-      <div class="card bg-gray-900 text-white shadow-xl p-6">
-        <h2 class="text-xl font-bold mb-4">Code généré</h2>
-        <pre class="bg-gray-800 rounded-lg p-4 overflow-x-auto">
-<code>
-</code>
+      <div class="card shadow-xl p-6 bg-gray-900 rounded-2xl border border-fuchsia-400/40">
+        <h2 class="text-lg font-semibold mb-4 text-fuchsia-300">Code généré</h2>
+        <pre class="bg-gray-800/90 rounded-lg p-4 overflow-x-auto text-sm text-fuchsia-200">
+<code id="svg-output"></code>
         </pre>
-        <button class="btn btn-outline btn-secondary mt-4">Copier le code</button>
       </div>
 
     </div>
 
-    <div class="flex items-center w-full max-w-5xl gap-4">
-      <textarea 
-        placeholder="Écris ton prompt ici..." 
-        class="textarea textarea-bordered flex-grow h-20"
+    <div class="flex items-start w-full max-w-6xl gap-4">
+      <textarea
+        id="user-prompt"
+        placeholder="Décris ton SVG ici..."
+        class="textarea textarea-bordered flex-grow h-20 border-indigo-300 focus:border-fuchsia-400 focus:ring focus:ring-fuchsia-200"
       ></textarea>
-      <button class="btn btn-primary">Générer</button>
+      <button id="generate-button" class="btn btn-primary bg-gradient-to-r from-fuchsia-500 to-indigo-600 border-0 hover:from-fuchsia-600 hover:to-indigo-700">
+        Générer
+      </button>
     </div>
 
   </div>
+
+  <script>
+    //@ts-nocheck
+	
+    async function generateSVG(prompt) {
+      console.log('Generating SVG for prompt:', prompt);
+      const res = await fetch('/api/generateSVG', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await res.json();
+      return data.svg;
+    }
+
+    async function handleSubmit() {
+      let prompt = "";
+      let svgCode = "";
+      const promptElement = document.getElementById("user-prompt");
+      prompt = promptElement ? promptElement.value : "";
+      console.log('submitted: ', prompt);
+
+      const svgContainer = document.getElementById("svg-container");
+      let svgOutput = document.getElementById("svg-output");
+
+        svgContainer.innerHTML = `<span class="loading loading-ring loading-xl"></span>`;
+  generateButton.disabled = true;
+
+      svgCode = await generateSVG(prompt);
+      console.log('svgCode: ', svgCode);
+
+      svgOutput.textContent = svgCode;
+      svgContainer.innerHTML = svgCode;
+
+      generateButton.disabled = false;
+    }
+
+    const generateButton = document.getElementById("generate-button");
+    if (generateButton) {
+      generateButton.addEventListener("click", handleSubmit);
+    }
+  </script>
 </Layout>
