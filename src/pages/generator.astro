@@ -1,135 +1,176 @@
 ---
 import Layout from '../layouts/Layout.astro';
 ---
-
 <Layout>
-   <div class="flex flex-col items-center w-full p-6 gap-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-fuchsia-50 min-h-screen">
-
+  <div class="flex flex-col items-center w-full p-6 gap-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-fuchsia-50 min-h-screen">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-6xl">
-      
       <div class="card shadow-xl p-6 flex flex-col bg-white/90 backdrop-blur rounded-2xl border border-indigo-200">
         <h2 class="text-lg font-semibold mb-4 text-indigo-700">Aperçu SVG</h2>
-        <div
-          id="svg-container"
-          class="border border-dashed border-indigo-300/70 w-full h-64 flex items-center justify-center rounded-xl bg-white"
-        >
+        <div id="svg-container" class="border border-dashed border-indigo-300/70 w-full h-64 flex items-center justify-center rounded-xl bg-white">
           <span class="text-indigo-400">Votre SVG apparaîtra ici...</span>
         </div>
       </div>
 
       <div class="card shadow-xl p-6 bg-gray-900 rounded-2xl border border-fuchsia-400/40">
         <h2 class="text-lg font-semibold mb-4 text-fuchsia-300">Code généré</h2>
-        <pre class="bg-gray-800/90 rounded-lg p-4 overflow-x-auto text-sm text-fuchsia-200">
-<code id="svg-output"></code>
-        </pre>
+        <pre class="bg-gray-800/90 rounded-lg p-4 overflow-x-auto text-sm text-fuchsia-200"><code id="svg-output"></code></pre>
       </div>
-      <div class="flex gap-3 mt-4">
-  <button id="copy-button" class="btn btn-outline btn-secondary">Copier le code</button>
-  <button id="save-button" class="btn btn-success">Enregistrer</button>
-<div class="mt-6">
-  <a href="/library" class="btn btn-outline btn-info">
-    Voir la bibliothèque
-  </a>
-</div>
-</div>
 
+      <div class="flex gap-3 mt-4">
+        <button id="copy-button" class="btn btn-outline btn-secondary">Copier le code</button>
+        <button id="save-button" class="btn btn-success">Enregistrer</button>
+        <button class="btn btn-secondary m-2" id="edit-button">Edit</button>
+        <div class="mt-6">
+          <a href="/library" class="btn btn-outline btn-info">Voir la bibliothèque</a>
+        </div>
+      </div>
     </div>
 
     <div class="flex items-start w-full max-w-6xl gap-4">
-      <textarea
-        id="user-prompt"
-        placeholder="Décris ton SVG ici..."
-        class="textarea textarea-bordered flex-grow h-20 border-indigo-300 focus:border-fuchsia-400 focus:ring focus:ring-fuchsia-200"
-      ></textarea>
-      <button id="generate-button" class="btn btn-primary bg-gradient-to-r from-fuchsia-500 to-indigo-600 border-0 hover:from-fuchsia-600 hover:to-indigo-700">
-        Générer
-      </button>
+      <textarea id="user-prompt" placeholder="Décris ton SVG ici..." class="textarea textarea-bordered flex-grow h-20 border-indigo-300 focus:border-fuchsia-400 focus:ring focus:ring-fuchsia-200"></textarea>
+      <button id="generate-button" class="btn btn-primary bg-gradient-to-r from-fuchsia-500 to-indigo-600 border-0 hover:from-fuchsia-600 hover:to-indigo-700">Générer</button>
     </div>
-
   </div>
 
-   <script>
-  //@ts-nocheck
+  <script>
+    //@ts-nocheck
 
-  async function generateSVG(prompt) {
-    console.log('Generating SVG for prompt:', prompt);
-    const res = await fetch('/api/generateSVG', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    });
-    const data = await res.json();
-    return data.svg;
-  }
+    // Historique des prompts et réponses (role: 'user' | 'assistant', content: string)
+    let promptList = [];
 
-  async function handleSubmit() {
-    const promptElement = document.getElementById("user-prompt");
-    const svgContainer  = document.getElementById("svg-container");
-    const svgOutput     = document.getElementById("svg-output");
-    const generateButton = document.getElementById("generate-button");
-
-    const prompt = (promptElement?.value || "").trim();
-    if (!prompt) return;
-
-    // spinner + désactivation bouton
-    svgContainer.innerHTML = `<span class="loading loading-ring loading-xl"></span>`;
-    generateButton.disabled = true;
-
-    try {
-      const svgCode = await generateSVG(prompt);
-      console.log('svgCode: ', svgCode);
-
-      svgOutput.textContent = svgCode || "// Aucun SVG généré";
-      svgContainer.innerHTML = svgCode || `<span class="text-gray-400">Aucun SVG reçu</span>`;
-    } catch (err) {
-      console.error("Erreur:", err);
-      svgOutput.textContent = "// Erreur lors de la génération";
-      svgContainer.innerHTML = `<span class="text-error">Erreur serveur</span>`;
-    } finally {
-      generateButton.disabled = false;
-    }
-  }
-
-  async function handleSave() {
-    const code = document.getElementById("svg-output")?.textContent || "";
-    if (!code) {
-      alert("Aucun code SVG à enregistrer !");
-      return;
-    }
-
-    const name = prompt("Nom du SVG ?");
-    if (!name) return;
-
-    try {
-      const res = await fetch("/api/saveSVG", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, code }),
+    // Envoie l'historique (messages array) à l'endpoint
+    async function generateSVG(messages) {
+      console.log('Sending messages to /api/generateSVG:', messages);
+      const res = await fetch('/api/generateSVG', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(messages),
       });
-
-      if (res.ok) {
-        alert("SVG enregistré avec succès !");
-      } else {
-        alert("Erreur lors de l'enregistrement.");
-      }
-    } catch (err) {
-      console.error("Erreur:", err);
-      alert("❌ Impossible d’enregistrer.");
+      const data = await res.json();
+      // attend l'objet { svg: { role, content } } ou une erreur
+      return data.svg || { role: 'assistant', content: '' };
     }
-  }
 
-  function handleCopy() {
-    const code = document.getElementById("svg-output")?.textContent || "";
-    if (!code) return;
-    navigator.clipboard.writeText(code).then(() => {
-      alert("📋 Code copié !");
-    });
-  }
+    // Gestion de la génération initiale
+    async function handleSubmit() {
+      const promptElement = document.getElementById("user-prompt");
+      const generateButton = document.getElementById("generate-button");
+      const editButton = document.getElementById("edit-button");
+      const svgContainer  = document.getElementById("svg-container");
+      const svgOutput     = document.getElementById("svg-output");
 
-  // attacher les events
-  document.getElementById("generate-button")?.addEventListener("click", handleSubmit);
-  document.getElementById("save-button")?.addEventListener("click", handleSave);
-  document.getElementById("copy-button")?.addEventListener("click", handleCopy);
-</script>
+      const prompt = (promptElement?.value || "").trim();
+      if (!prompt) return;
 
+      console.log("submitted:", prompt);
+
+      // Réinitialiser l'historique pour une nouvelle conversation / génération
+      promptList.length = 0;
+      promptList.push({ role: "user", content: prompt });
+
+      // spinner + désactivation
+      svgContainer.innerHTML = `<span class="loading loading-ring loading-xl"></span>`;
+      generateButton.disabled = true;
+      if (editButton) editButton.disabled = true;
+
+      try {
+        const aiResponse = await generateSVG(promptList);
+        // aiResponse = { role, content } où content contient uniquement le <svg>...</svg> extrait par le serveur
+        const svgCode = (aiResponse.content || "").trim();
+
+        // Ajout de la réponse de l'IA à l'historique
+        promptList.push(aiResponse);
+
+        // Affichage
+        svgOutput.textContent = svgCode || "// Aucun SVG généré";
+        svgContainer.innerHTML = svgCode || `<span class="text-gray-400">Aucun SVG reçu</span>`;
+      } catch (err) {
+        console.error("Erreur:", err);
+        svgOutput.textContent = "// Erreur lors de la génération";
+        svgContainer.innerHTML = `<span class="text-error">Erreur serveur</span>`;
+      } finally {
+        generateButton.disabled = false;
+        if (editButton) editButton.disabled = false;
+      }
+    }
+
+    async function handleEdit() {
+      const promptElement = document.getElementById("user-prompt");
+      const generateButton = document.getElementById("generate-button");
+      const editButton = document.getElementById("edit-button");
+      const svgContainer  = document.getElementById("svg-container");
+      const svgOutput     = document.getElementById("svg-output");
+
+      const prompt = (promptElement?.value || "").trim();
+      if (!prompt) return;
+
+
+      // Ajouter le prompt utilisateur à l'historique (on garde les échanges précédents)
+      promptList.push({ role: "user", content: prompt });
+
+      svgContainer.innerHTML += `<span class="loading loading-ring loading-xl"></span>`;
+      generateButton.disabled = true;
+      if (editButton) editButton.disabled = true;
+
+      try {
+        const aiResponse = await generateSVG(promptList);
+        const svgCode = (aiResponse.content || "").trim();
+
+        promptList.push(aiResponse);
+
+        svgOutput.textContent = svgCode || "// Aucun SVG généré";
+        svgContainer.innerHTML = svgCode || `<span class="text-gray-400">Aucun SVG reçu</span>`;
+        console.log("Historique des prompts:", promptList);
+      } catch (err) {
+        console.error("Erreur edit:", err);
+        alert("Erreur lors de l'édition");
+      } finally {
+        generateButton.disabled = false;
+        if (editButton) editButton.disabled = false;
+      }
+    }
+
+    async function handleSave() {
+      const code = document.getElementById("svg-output")?.textContent || "";
+      if (!code) {
+        alert("Aucun code SVG à enregistrer !");
+        return;
+      }
+
+      const name = prompt("Nom du SVG ?");
+      if (!name) return;
+
+      try {
+        const res = await fetch("/api/saveSVG", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, code }),
+        });
+
+        if (res.ok) {
+          alert("SVG enregistré avec succès !");
+        } else {
+          const txt = await res.text();
+          console.error("Save error:", txt);
+          alert("Erreur lors de l'enregistrement.");
+        }
+      } catch (err) {
+        console.error("Erreur:", err);
+        alert("Impossible d’enregistrer.");
+      }
+    }
+
+    function handleCopy() {
+      const code = document.getElementById("svg-output")?.textContent || "";
+      if (!code) return;
+      navigator.clipboard.writeText(code).then(() => {
+        alert("📋 Code copié !");
+      });
+    }
+
+    document.getElementById("generate-button")?.addEventListener("click", handleSubmit);
+    document.getElementById("save-button")?.addEventListener("click", handleSave);
+    document.getElementById("copy-button")?.addEventListener("click", handleCopy);
+    document.getElementById("edit-button")?.addEventListener("click", handleEdit);
+  </script>
 </Layout>
