@@ -25,14 +25,16 @@ const records = await pb.collection("svgs").getFullList({
           <div class="card bg-white shadow-md p-4">
             <h2 class="font-semibold text-lg mb-2">{rec.name}</h2>
             <div class="border border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-              <div set:html={rec.code}></div>
+              <!-- Correction ici : rec.code_svg au lieu de rec.code -->
+              <div set:html={rec.code_svg}></div>
             </div>
             <pre class="bg-gray-100 rounded mt-3 p-2 text-xs overflow-x-auto">
-<code>{rec.code}</code>
+              <!-- Correction ici aussi -->
+              <code>{rec.code_svg}</code>
             </pre>
           </div>
         ))}
       </div>
     )}
-  </div> 
+  </div>
 </Layout>
