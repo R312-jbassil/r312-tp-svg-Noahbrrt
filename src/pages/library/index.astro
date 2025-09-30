@@ -1,5 +1,5 @@
 ---
-import Layout from "../layouts/Layout.astro";
+import Layout from "../../layouts/Layout.astro";
 import PocketBase from "pocketbase";
 
 const pb = new PocketBase(import.meta.env.PB_URL || "http://127.0.0.1:8090");
@@ -25,13 +25,15 @@ const records = await pb.collection("svgs").getFullList({
           <div class="card bg-white shadow-md p-4">
             <h2 class="font-semibold text-lg mb-2">{rec.name}</h2>
             <div class="border border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-              <!-- Correction ici : rec.code_svg au lieu de rec.code -->
               <div set:html={rec.code_svg}></div>
             </div>
             <pre class="bg-gray-100 rounded mt-3 p-2 text-xs overflow-x-auto">
-              <!-- Correction ici aussi -->
               <code>{rec.code_svg}</code>
             </pre>
+
+            <a href={`/library/${rec.id}`} class="btn btn-outline btn-info mt-3">
+              Modifier ce SVG
+            </a>
           </div>
         ))}
       </div>

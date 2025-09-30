@@ -1,0 +1,122 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import pb from "../../utils/pb";
+import { Collections, type SvgsRecord } from "../../utils/pocketbase-types";
+
+const id = Astro.params.id;
+
+const svg: SvgsRecord = await pb.collection(Collections.Svgs).getOne(id);
+
+const history = [];
+---
+
+<Layout>
+  <div class="max-w-4xl mx-auto p-6 space-y-6">
+    <a href="/library" class="btn btn-outline btn-sm">← Retour à la bibliothèque</a>
+
+    <h1 class="text-2xl font-bold text-indigo-700">{svg.name}</h1>
+
+    <div class="border border-dashed border-indigo-300 rounded-lg p-6 bg-white">
+      <div set:html={svg.code}></div>
+    </div>
+
+    <div class="card bg-white shadow-md p-4 space-y-3">
+      <h2 class="font-semibold text-lg mb-2">Historique des modifications</h2>
+      {history.length === 0 ? (
+        <p class="text-gray-400">Aucune conversation pour ce SVG.</p>
+      ) : (
+        history.map((msg) => (
+          <div class:list={[
+            "p-2 rounded",
+            msg.role === "user" ? "bg-indigo-100 text-indigo-900" : "bg-gray-100 text-gray-700"
+          ]}>
+            <strong>{msg.role === "user" ? "Vous :" : "IA :"}</strong> {msg.content}
+          </div>
+        ))
+      )}
+    </div>
+
+    <div class="flex gap-3">
+      <input
+        id="chat-input"
+        type="text"
+        placeholder="Décrivez une modification..."
+        class="input input-bordered flex-1"
+      />
+      <button id="send-button" class="btn btn-primary">Envoyer</button>
+    </div>
+  </div>
+
+  <script>
+  //@ts-nocheck
+  const sendButton = document.getElementById("send-button");
+  const input = document.getElementById("chat-input");
+  const svgPreview = document.querySelector(".border div"); 
+  const historyContainer = document.querySelector(".card"); 
+
+  let history = []; 
+  const svgId = "{id}"; 
+
+  async function generateSVG(messages) {
+    const res = await fetch("/api/generateSVG", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(messages),
+    });
+    const data = await res.json();
+    return data.svg?.content || "";
+  }
+
+  async function update(updatedData) {
+    const response = await fetch("/api/updateSVG", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedData),
+    });
+    return response.json();
+  }
+
+  sendButton?.addEventListener("click", async () => {
+    const content = input.value.trim();
+    if (!content) return;
+
+    history.push({ role: "user", content });
+
+    historyContainer.innerHTML += `
+      <div class="p-2 rounded bg-indigo-100 text-indigo-900">
+        <strong>Vous :</strong> ${content}
+      </div>
+    `;
+
+    input.value = "";
+
+    let aiResponse = await generateSVG(history);
+
+    const svgMatch = aiResponse.match(/<svg[\s\S]*?<\/svg>/i);
+    aiResponse = svgMatch ? svgMatch[0] : "";
+
+    history.push({ role: "assistant", content: aiResponse });
+
+    svgPreview.innerHTML = aiResponse;
+
+    historyContainer.innerHTML += `
+      <div class="p-2 rounded bg-gray-100 text-gray-700">
+        <strong>IA :</strong> ${aiResponse}
+      </div>
+    `;
+
+    const data = await update({
+      id: svgId, 
+      code_svg: aiResponse,
+      chat_history: JSON.stringify(history),
+    });
+
+    if (data.success) {
+      console.log("SVG updated in PB:", data.id);
+    } else {
+      console.error("Update failed:", data.error);
+    }
+  });
+</script>
+
+</Layout>
