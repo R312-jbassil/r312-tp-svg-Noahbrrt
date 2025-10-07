@@ -12,12 +12,12 @@ const history = [];
 
 <Layout>
   <div class="max-w-4xl mx-auto p-6 space-y-6">
-    <a href="/library" class="btn btn-outline btn-sm">← Retour à la bibliothèque</a>
+    <a href="/gallery" class="btn btn-outline btn-sm">← Retour à la bibliothèque</a>
 
     <h1 class="text-2xl font-bold text-indigo-700">{svg.name}</h1>
 
     <div class="border border-dashed border-indigo-300 rounded-lg p-6 bg-white">
-      <div set:html={svg.code}></div>
+      <div set:html={svg.code_svg}></div>
     </div>
 
     <div class="card bg-white shadow-md p-4 space-y-3">
@@ -37,13 +37,16 @@ const history = [];
     </div>
 
     <div class="flex gap-3">
+      <form id="chat-form" class="flex flex-1" autocomplete="off" method="POST">
       <input
         id="chat-input"
         type="text"
         placeholder="Décrivez une modification..."
         class="input input-bordered flex-1"
       />
-      <button id="send-button" class="btn btn-primary">Envoyer</button>
+      <input type="hidden" name="svg-id" value={svg.id} />
+      <input type="submit" id="send-button" class="btn btn-primary">Envoyer</button>
+      </form>
     </div>
   </div>
 
@@ -53,9 +56,10 @@ const history = [];
   const input = document.getElementById("chat-input");
   const svgPreview = document.querySelector(".border div"); 
   const historyContainer = document.querySelector(".card"); 
+  const chatForm = document.getElementById("chat-form");
 
   let history = []; 
-  const svgId = "{id}"; 
+
 
   async function generateSVG(messages) {
     const res = await fetch("/api/generateSVG", {
@@ -75,8 +79,10 @@ const history = [];
     });
     return response.json();
   }
-
-  sendButton?.addEventListener("click", async () => {
+  chatForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const formData = new FormData(chatForm);
+    const svgId = formData.get("svg-id");
     const content = input.value.trim();
     if (!content) return;
 
@@ -104,7 +110,8 @@ const history = [];
         <strong>IA :</strong> ${aiResponse}
       </div>
     `;
-
+      console.log("svgId:", svgId);
+      
     const data = await update({
       id: svgId, 
       code_svg: aiResponse,

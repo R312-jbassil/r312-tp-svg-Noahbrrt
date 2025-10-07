@@ -1,5 +1,8 @@
 ---
+
 import Layout from '../layouts/Layout.astro';
+const user = Astro.locals.user;
+
 ---
 
 <Layout>
@@ -111,36 +114,49 @@ import Layout from '../layouts/Layout.astro';
       }
     });
 
-    document.getElementById("save-btn")?.addEventListener("click", async () => {
-      if (!lastSVG) {
-        alert("⚠️ Aucun SVG à sauvegarder !");
-        return;
-      }
+   // Bouton Save — Associe le SVG à l'utilisateur connecté
+document.getElementById("save-btn")?.addEventListener("click", async () => {
+  if (!lastSVG) {
+    alert("⚠️ Aucun SVG à sauvegarder !");
+    return;
+  }
 
-      const name = prompt("Nom du SVG :", "");
-      if (!name) return;
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (!user) {
+    alert("⚠️ Vous devez être connecté pour sauvegarder un SVG.");
+    return;
+  }
 
-      try {
-        const res = await fetch("/api/saveSVG", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name,
-            code_svg: lastSVG,
-            chat_history: JSON.stringify(history),
-          }),
-        });
+  const name = prompt("Nom du SVG :", "");
+  if (!name) return;
 
-        const data = await res.json();
-        if (data.success) {
-          alert("SVG sauvegardé avec succès ! ID : " + data.id);
-        } else {
-          alert("Erreur lors de la sauvegarde : " + (data.error || "inconnue"));
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Erreur réseau lors de la sauvegarde.");
-      }
+  try {
+    const svgData = {
+      name,
+      code_svg: lastSVG,
+      chat_history: JSON.stringify(history),
+      user: user.id, 
+    };
+
+    console.log("Saving SVG:", svgData);
+
+    const res = await fetch("/api/saveSVG", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(svgData),
     });
+
+    const data = await res.json();
+
+    if (data.success) {
+      alert("✅ SVG sauvegardé avec succès ! ID : " + data.id);
+    } else {
+      alert("❌ Erreur lors de la sauvegarde : " + (data.error || "inconnue"));
+    }
+  } catch (err) {
+    console.error(err);
+    alert("🚨 Erreur réseau lors de la sauvegarde.");
+  }
+});
   </script>
 </Layout>

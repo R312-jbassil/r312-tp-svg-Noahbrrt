@@ -11,11 +11,12 @@ export const onRequest = async (context, next) => {
       // Si valide, on ajoute l'utilisateur connecté dans locals
       context.locals.user = pb.authStore.record;
     }
-  } 
+  }
 
   // 🔹 Pour toutes les routes API
   if (context.url.pathname.startsWith("/api/")) {
-    if (!context.locals.user && context.url.pathname !== "/api/login") {
+    if (!context.locals.user && context.url.pathname !== "/api/login" && context.url.pathname !== "/api/signup") {
+      // ✅ On autorise aussi /api/signup
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
     }
     return next();
@@ -23,7 +24,11 @@ export const onRequest = async (context, next) => {
 
   // 🔹 Pour toutes les autres pages : rediriger vers /login si non connecté
   if (!context.locals.user) {
-    if (context.url.pathname !== "/login" && context.url.pathname !== "/") {
+    if (
+      context.url.pathname !== "/login" &&
+      context.url.pathname !== "/signup" &&
+      context.url.pathname !== "/"
+    ) {
       return Response.redirect(new URL("/login", context.url), 303);
     }
   }

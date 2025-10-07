@@ -3,20 +3,32 @@ import Layout from "../../layouts/Layout.astro";
 import PocketBase from "pocketbase";
 
 const pb = new PocketBase(import.meta.env.PB_URL || "http://127.0.0.1:8090");
-const records = await pb.collection("svgs").getFullList({
-  sort: "-created",
-});
+
+const user = Astro.locals.user;
+
+let records = [];
+
+if (user) {
+  records = await pb.collection("svgs").getFullList({
+    sort: "-created",
+    filter: `user = "${user.id}"`, 
+  });
+} else {
+  return Astro.redirect("/login");
+}
 ---
 
 <Layout>
   <div class="max-w-6xl mx-auto p-6 space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-indigo-700">Bibliothèque de SVGs</h1>
-      <a href="/generator" class="btn btn-primary">← Retour générateur</a>
+      <h1 class="text-2xl font-bold text-indigo-700">
+        Mes SVGs enregistrés
+      </h1>
+      <a href="/generator" class="btn btn-primary">← Retour au générateur</a>
     </div>
 
     {records.length === 0 ? (
-      <div class="alert">
+      <div class="alert alert-info">
         <span>Aucun SVG enregistré pour le moment.</span>
       </div>
     ) : (
@@ -31,7 +43,7 @@ const records = await pb.collection("svgs").getFullList({
               <code>{rec.code_svg}</code>
             </pre>
 
-            <a href={`/library/${rec.id}`} class="btn btn-outline btn-info mt-3">
+            <a href={`/gallery/${rec.id}`} class="btn btn-outline btn-info mt-3">
               Modifier ce SVG
             </a>
           </div>

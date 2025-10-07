@@ -1,8 +1,11 @@
 ---
 import "../styles/global.css";
+
+const user = Astro.locals.user; 
 ---
+
 <!doctype html>
-<html lang="en" data-theme="cupcake">
+<html lang="fr" data-theme="cupcake">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
@@ -10,6 +13,7 @@ import "../styles/global.css";
     <meta name="generator" content={Astro.generator} />
     <title>Astro Basics</title>
   </head>
+
   <body class="h-full">
     <div class="h-full flex flex-col min-h-0">
 
@@ -17,16 +21,35 @@ import "../styles/global.css";
         <div class="flex-1">
           <a href="/" class="btn btn-ghost normal-case text-xl">Home</a>
         </div>
+
         <div class="flex-none">
-          <ul class="menu menu-horizontal px-1">
+          <ul class="menu menu-horizontal px-1 items-center gap-2">
             <li><a href="/generator">Generator</a></li>
-            <li><a href="/library">Library</a></li>¨
-            <form action="/api/logout" method="POST">
-  <button class="btn btn-outline btn-error btn-sm">Logout</button>
-</form>
+            <li><a href="/gallery">gallery</a></li>
+
+            {user ? (
+              <>
+                <li>
+                  <span class="text-sm opacity-70">
+                    Bonjour {user.email}
+                  </span>
+                </li>
+                <li>
+                  <form action="/api/logout" method="POST">
+                    <button class="btn btn-outline btn-error btn-sm">Logout</button>
+                  </form>
+                </li>
+              </>
+            ) : (
+              <>
+                <li><a href="/login" class="btn btn-sm btn-outline">Sign In</a></li>
+                <li><a href="/signup" class="btn btn-sm btn-primary">Sign Up</a></li>
+              </>
+            )}
           </ul>
         </div>
       </div>
+
       <div class="flex-1 min-h-0">
         <slot />
       </div>
