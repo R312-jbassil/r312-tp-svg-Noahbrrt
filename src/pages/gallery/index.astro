@@ -1,10 +1,12 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import PocketBase from "pocketbase";
+import { ui } from "../../i18n/ui.js"; 
 
 const pb = new PocketBase(import.meta.env.PB_URL || "http://127.0.0.1:8090");
 
 const user = Astro.locals.user;
+const locale = Astro.locals.lang ?? "en"; 
 
 let records = [];
 
@@ -22,14 +24,16 @@ if (user) {
   <div class="max-w-6xl mx-auto p-6 space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold text-indigo-700">
-        Mes SVGs enregistrés
+        {ui[locale].gallery.title}
       </h1>
-      <a href="/generator" class="btn btn-primary">← Retour au générateur</a>
+      <a href="/generator" class="btn btn-primary">
+        ← {ui[locale].gallery.returnToGenerator ?? "Retour au générateur"}
+      </a>
     </div>
 
     {records.length === 0 ? (
       <div class="alert alert-info">
-        <span>Aucun SVG enregistré pour le moment.</span>
+        <span>{ui[locale].gallery.noSVG ?? "Aucun SVG enregistré pour le moment."}</span>
       </div>
     ) : (
       <div class="grid md:grid-cols-2 gap-6">
@@ -44,7 +48,7 @@ if (user) {
             </pre>
 
             <a href={`/gallery/${rec.id}`} class="btn btn-outline btn-info mt-3">
-              Modifier ce SVG
+              {ui[locale].gallery.viewDetails}
             </a>
           </div>
         ))}

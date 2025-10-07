@@ -1,8 +1,8 @@
 ---
-
-import Layout from '../layouts/Layout.astro';
+import Layout from "../layouts/Layout.astro";
+import { ui } from "../i18n/ui.js"; 
 const user = Astro.locals.user;
-
+const locale = Astro.locals.lang ?? "en"; 
 ---
 
 <Layout>
@@ -10,26 +10,37 @@ const user = Astro.locals.user;
     
     <div class="flex flex-col items-center justify-center bg-base-200 p-4">
       <div id="svg-container" class="w-full h-full flex items-center justify-center border rounded bg-white">
-        <span class="text-gray-400">Votre SVG apparaîtra ici...</span>
+        <span class="text-gray-400">
+          {ui[locale].generator.contentPlaceholder}
+        </span>
       </div>
 
       <div class="mt-4">
-        <button id="save-btn" class="btn btn-success">Save</button>
+        <button id="save-btn" class="btn btn-success">
+          💾 {ui[locale].generator.saveButton ?? "Save"}
+        </button>
       </div>
     </div>
 
     <div class="flex flex-col bg-base-300 relative">
       
-      <div class="divider">Conversation</div>
+      <div class="divider">{ui[locale].generator.title}</div>
 
       <div id="chat-history" class="flex flex-col gap-4 w-full mb-20 overflow-y-auto flex-grow p-4">
-        <span class="text-gray-400">Aucun message pour l’instant…</span>
+        <span class="text-gray-400">{ui[locale].generator.noMessages ?? "Aucun message pour l’instant…"}</span>
       </div>
 
       <form id="input-prompt-form" class="flex flex-col gap-2 w-full absolute bottom-0 left-0 right-0 bg-base-100 p-4" autocomplete="off">
         <div class="flex items-center gap-2">
-          <input id="prompt-input" type="text" class="input flex-grow" placeholder="Enter a prompt to edit the SVG..." />
-          <button class="btn btn-primary" type="submit">Edit</button>
+          <input
+            id="prompt-input"
+            type="text"
+            class="input flex-grow"
+            placeholder={ui[locale].generator.promptLabel}
+          />
+          <button class="btn btn-primary" type="submit">
+            {ui[locale].generator.editButton}
+          </button>
         </div>
       </form>
     </div>
@@ -37,14 +48,13 @@ const user = Astro.locals.user;
 
   <script>
     //@ts-nocheck
-
     let history = [];
-    let lastSVG = ""; 
+    let lastSVG = "";
 
     async function generateSVG(messages) {
-      const res = await fetch('/api/generateSVG', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/generateSVG", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(messages),
       });
       const data = await res.json();
@@ -53,10 +63,7 @@ const user = Astro.locals.user;
 
     function addMessage(role, content) {
       const chatHistory = document.getElementById("chat-history");
-
-      if (chatHistory.querySelector("span.text-gray-400")) {
-        chatHistory.innerHTML = "";
-      }
+      if (chatHistory.querySelector("span.text-gray-400")) chatHistory.innerHTML = "";
 
       const wrapper = document.createElement("div");
       wrapper.classList.add("chat", role === "user" ? "chat-start" : "chat-end");
@@ -102,8 +109,8 @@ const user = Astro.locals.user;
 
       try {
         const result = await generateSVG(history);
-        const aiResponse = result.content || ""; 
-        lastSVG = aiResponse; 
+        const aiResponse = result.content || "";
+        lastSVG = aiResponse;
         history.push({ role: "assistant", content: aiResponse });
         addMessage("assistant", aiResponse);
         svgContainer.innerHTML = aiResponse || '<span class="text-gray-400">Aucun SVG reçu</span>';
@@ -114,49 +121,46 @@ const user = Astro.locals.user;
       }
     });
 
-   // Bouton Save — Associe le SVG à l'utilisateur connecté
-document.getElementById("save-btn")?.addEventListener("click", async () => {
-  if (!lastSVG) {
-    alert("⚠️ Aucun SVG à sauvegarder !");
-    return;
-  }
+    document.getElementById("save-btn")?.addEventListener("click", async () => {
+      if (!lastSVG) {
+        alert("⚠️ Aucun SVG à sauvegarder !");
+        return;
+      }
 
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (!user) {
-    alert("⚠️ Vous devez être connecté pour sauvegarder un SVG.");
-    return;
-  }
+      const user = JSON.parse(localStorage.getItem("user"));
+      if (!user) {
+        alert("⚠️ Vous devez être connecté pour sauvegarder un SVG.");
+        return;
+      }
 
-  const name = prompt("Nom du SVG :", "");
-  if (!name) return;
+      const name = prompt("Nom du SVG :", "");
+      if (!name) return;
 
-  try {
-    const svgData = {
-      name,
-      code_svg: lastSVG,
-      chat_history: JSON.stringify(history),
-      user: user.id, 
-    };
+      try {
+        const svgData = {
+          name,
+          code_svg: lastSVG,
+          chat_history: JSON.stringify(history),
+          user: user.id,
+        };
 
-    console.log("Saving SVG:", svgData);
+        const res = await fetch("/api/saveSVG", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(svgData),
+        });
 
-    const res = await fetch("/api/saveSVG", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(svgData),
+        const data = await res.json();
+
+        if (data.success) {
+          alert("✅ SVG sauvegardé avec succès !");
+        } else {
+          alert("❌ Erreur lors de la sauvegarde : " + (data.error || "inconnue"));
+        }
+      } catch (err) {
+        console.error(err);
+        alert("🚨 Erreur réseau lors de la sauvegarde.");
+      }
     });
-
-    const data = await res.json();
-
-    if (data.success) {
-      alert("✅ SVG sauvegardé avec succès ! ID : " + data.id);
-    } else {
-      alert("❌ Erreur lors de la sauvegarde : " + (data.error || "inconnue"));
-    }
-  } catch (err) {
-    console.error(err);
-    alert("🚨 Erreur réseau lors de la sauvegarde.");
-  }
-});
   </script>
 </Layout>

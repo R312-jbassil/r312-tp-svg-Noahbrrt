@@ -1,7 +1,9 @@
 ---
 import "../styles/global.css";
+import { ui } from "../i18n/ui.js";
 
 const user = Astro.locals.user; 
+const locale = (Astro.locals.lang ?? "en");
 ---
 
 <!doctype html>
@@ -26,6 +28,16 @@ const user = Astro.locals.user;
           <ul class="menu menu-horizontal px-1 items-center gap-2">
             <li><a href="/generator">Generator</a></li>
             <li><a href="/gallery">gallery</a></li>
+            <li>
+            <li>
+              <form method="POST" action={Astro.url.pathname}>
+                <select name="language" class="select select-bordered select-sm" onchange="this.form.submit()">
+                  <option disabled selected="true">{ui[locale].nav.language}</option>
+                  <option value="en">English</option>
+                  <option value="fr">Français</option>
+                </select>
+              </form>
+            </li>
 
             {user ? (
               <>
