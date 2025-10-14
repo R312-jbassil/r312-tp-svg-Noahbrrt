@@ -17,7 +17,7 @@ const locale = Astro.locals.lang ?? "en";
 
       <div class="mt-4">
         <button id="save-btn" class="btn btn-success">
-          💾 {ui[locale].generator.saveButton ?? "Save"}
+          {ui[locale].generator.saveButton ?? "Save"}
         </button>
       </div>
     </div>
@@ -31,25 +31,27 @@ const locale = Astro.locals.lang ?? "en";
       </div>
 
       <form id="input-prompt-form" class="flex flex-col gap-2 w-full absolute bottom-0 left-0 right-0 bg-base-100 p-4" autocomplete="off">
-        <div class="flex items-center gap-2">
-          <input
-            id="prompt-input"
-            type="text"
-            class="input flex-grow"
-            placeholder={ui[locale].generator.promptLabel}
-          />
-          <button class="btn btn-primary" type="submit">
-            {ui[locale].generator.editButton}
-          </button>
-        </div>
-      </form>
-    </div>
+  <div class="flex items-center gap-2">
+    <input
+      id="prompt-input"
+      type="text"
+      class="input flex-grow"
+      placeholder={ui[locale].generator.promptLabel}
+    />
+    <button class="btn btn-primary" type="button" id="generate-btn">
+      Générer
+    </button>
+    <button class="btn btn-secondary" type="submit">
+      {ui[locale].generator.editButton}
+    </button>
   </div>
+</form>
 
   <script>
     //@ts-nocheck
     let history = [];
     let lastSVG = "";
+    let currentEditId = null;
 
     async function generateSVG(messages) {
       const res = await fetch("/api/generateSVG", {
@@ -59,6 +61,34 @@ const locale = Astro.locals.lang ?? "en";
       });
       const data = await res.json();
       return data.svg || "";
+    }
+
+    async function handleGeneration(e) {
+      e.preventDefault();
+      const input = document.getElementById("prompt-input");
+      const svgContainer = document.getElementById("svg-container");
+
+      const prompt = input.value.trim();
+      if (!prompt) return;
+
+      addMessage("user", prompt);
+      history.push({ role: "user", content: prompt });
+      input.value = "";
+
+      svgContainer.innerHTML = '<span class="loading loading-ring loading-xl"></span>';
+
+      try {
+        const result = await generateSVG(history);
+        const aiResponse = result.content || "";
+        lastSVG = aiResponse;
+        history.push({ role: "assistant", content: aiResponse });
+        addMessage("assistant", aiResponse);
+        svgContainer.innerHTML = aiResponse || '<span class="text-gray-400">Aucun SVG reçu</span>';
+      } catch (err) {
+        console.error(err);
+        addMessage("assistant", "⚠️ Erreur lors de la génération");
+        svgContainer.innerHTML = '<span class="text-error">Erreur serveur</span>';
+      }
     }
 
     function addMessage(role, content) {
@@ -93,31 +123,40 @@ const locale = Astro.locals.lang ?? "en";
       chatHistory.scrollTop = chatHistory.scrollHeight;
     }
 
+    document.getElementById("generate-btn")?.addEventListener("click", handleGeneration);
+
     document.getElementById("input-prompt-form")?.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (!currentEditId) {
+        handleGeneration(e);
+        return;
+      }
+
       const input = document.getElementById("prompt-input");
       const svgContainer = document.getElementById("svg-container");
-
       const prompt = input.value.trim();
       if (!prompt) return;
 
-      addMessage("user", prompt);
-      history.push({ role: "user", content: prompt });
-      input.value = "";
-
-      svgContainer.innerHTML = '<span class="loading loading-ring loading-xl"></span>';
-
       try {
-        const result = await generateSVG(history);
-        const aiResponse = result.content || "";
-        lastSVG = aiResponse;
-        history.push({ role: "assistant", content: aiResponse });
-        addMessage("assistant", aiResponse);
-        svgContainer.innerHTML = aiResponse || '<span class="text-gray-400">Aucun SVG reçu</span>';
+        const result = await fetch("/api/updateSVG", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: currentEditId,
+            code_svg: svgContainer.innerHTML,
+            chat_history: JSON.stringify([...history, { role: "user", content: prompt }])
+          })
+        });
+
+        if (!result.ok) {
+          throw new Error("Failed to update SVG");
+        }
+
+        await handleGeneration(e);
+        
       } catch (err) {
-        console.error(err);
-        addMessage("assistant", "⚠️ Erreur lors de la génération");
-        svgContainer.innerHTML = '<span class="text-error">Erreur serveur</span>';
+        console.error("Error updating SVG:", err);
+        alert("Error updating SVG");
       }
     });
 
