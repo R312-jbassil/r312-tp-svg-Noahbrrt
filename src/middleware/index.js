@@ -21,9 +21,14 @@ export const onRequest = async (context, next) => {
 
     // Pour les autres pages, si l'utilisateur n'est pas connecté, on le redirige vers /login
     if (!context.locals.user) {
-        if (context.url.pathname !== '/login' && context.url.pathname !== '/')
-            return Response.redirect(new URL('/login', context.url), 303);
+    if (
+        context.url.pathname !== '/login' &&
+        context.url.pathname !== '/signup' &&  
+        context.url.pathname !== '/'
+    ) {
+        return Response.redirect(new URL('/login', context.url), 303);
     }
+}
     // ... middleware pour l'i18n
     // Cette fonction middleware s'exécute à chaque requête.
     // context = infos de la requête (URL, cookies, méthode...)
